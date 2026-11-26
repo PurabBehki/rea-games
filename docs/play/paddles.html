@@ -25,13 +25,15 @@
   #modes button.alt { background:var(--panel); color:var(--text); }
   p.keys { margin:12px 2px 0; color:var(--muted); font-size:14px; }
   kbd { background:var(--panel); border-radius:5px; padding:1px 7px; font:inherit; font-weight:600; color:var(--text); }
+  #live { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
 </style>
 </head>
 <body>
 <main>
   <header><h1>Paddles</h1><span>own art &middot; rules rebuilt from the recording</span></header>
   <div id="court">
-    <canvas id="c" width="640" height="480" aria-label="Paddles game"></canvas>
+    <canvas id="c" width="640" height="480" role="img" aria-label="Paddles game"></canvas>
+    <div id="live" aria-live="polite"></div>
     <div id="msg">
       <h2 id="msgtitle">Paddles</h2>
       <p id="msgsub">First to 9 points wins.</p>
@@ -333,7 +335,7 @@ const { Paddles, KEY, W, H, WALL, PADDLE_W, PADDLE_H, RADIUS, WIN } = __mod0;
   cv.width = W * DPR; cv.height = H * DPR;
   const $ = (id) => document.getElementById(id);
   const game = new Paddles({ rng: Math.random, clock0: Math.floor(performance.now()) });
-
+  let lastlive="";
   // ---- drawing: flat shapes, a dotted centre line, big soft score digits
   function draw() {
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
@@ -359,6 +361,13 @@ const { Paddles, KEY, W, H, WALL, PADDLE_W, PADDLE_H, RADIUS, WIN } = __mod0;
       $("msgtitle").textContent = game.winner !== null && Math.max(...game.scores) >= WIN
         ? (game.winner === 0 ? "Left" : "Right") + " wins " + Math.max(...game.scores) + " to " + Math.min(...game.scores)
         : "Paddles";
+    }
+    const live= !game.playing && game.winner!==null && Math.max(...game.scores)>=WIN 
+    ? (game.winner === 0 ? "Left" : "Right") + " wins " + Math.max(...game.scores) + " to " + Math.min(...game.scores)
+    : "Left " + game.scores[0] + ", Right " + game.scores[1];
+    if(live !==lastlive) {
+      $("live").textContent=live;
+      lastlive=live;
     }
   }
 

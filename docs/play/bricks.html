@@ -33,15 +33,15 @@
 <body>
 <main>
   <header><h1>Bricks</h1><span>own art and levels &middot; rules rebuilt from the recording</span></header>
-  <div id="bar">
+  <div id="bar" aria-live="polite">
     <div class="box"><small>score</small><b id="score">0</b></div>
     <div class="box"><small>best</small><b id="best">0</b></div>
     <div class="box"><small>balls</small><b id="lives">3</b></div>
     <div class="box"><small>level</small><b id="level">1</b></div>
   </div>
   <div id="court">
-    <canvas id="c" width="448" height="378" aria-label="Bricks game"></canvas>
-    <div id="msg">
+    <canvas id="c" width="448" height="378" role="img" aria-label="Bricks game"></canvas>
+    <div id="msg" aria-live="polite">
       <h2 id="msgtitle">Bricks</h2>
       <p id="msgsub">Press Space or tap to play</p>
       <div id="levels"><button type="button" id="prev" aria-label="previous level">&darr;</button><button type="button" id="next" aria-label="next level">&uarr;</button></div>
@@ -417,15 +417,16 @@ const { Bricks, KEY, COLS } = __mod0;
       ctx.fillText({ "ready...": "3", "set..": "2", "go!": "go" }[b.label] ?? "", game.court.left + game.court.width / 2, p.y - 60);
     }
     ctx.restore();
-    $("score").textContent = String(game.vscore);
-    $("best").textContent = String(Math.max(best, game.score));
-    $("lives").textContent = String(game.lives);
-    $("level").textContent = String(game.level + 1);
+   const set = (id, v) => { const el = $(id), s = String(v); if (el.textContent !== s) el.textContent = s; };
+    set("score", game.vscore);
+    set("best", Math.max(best, game.score));
+    set("lives", game.lives);
+    set("level", game.level + 1);
     const menu = game.state === "menu";
     $("msg").classList.toggle("off", !menu);
     if (menu) {
-      $("msgtitle").textContent = ended === "lost" ? "Game over" : ended === "left" ? "Game ended" : "Bricks";
-      $("msgsub").textContent = (ended ? game.score + " points. " : "") + "Level " + (game.level + 1) + " of " + LEVELS.length + ". Press Space or tap to play";
+      set("msgtitle", ended === "lost" ? "Game over" : ended === "left" ? "Game ended" : "Bricks");
+      set("msgsub", (ended ? game.score + " points. " : "") + "Level " + (game.level + 1) + " of " + LEVELS.length + ". Press Space or tap to play");
     }
   }
 
