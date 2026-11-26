@@ -36,6 +36,10 @@ with `Object.hasOwn`; `test/compare.test.mjs` covers it.
 without cargo nothing after `2048 / bevy` was checked and there was no summary. A port that cannot run is that port's
 failure (`verifyGames` in `lib/verify.mjs`); the run goes on and ends with one line per port.
 
+**`new` promised a play page it never wrote.** `game.json` pointed `ports.web.play` at `ports/web/index.html`, but
+`scaffold` only made the folder, so `scripts/bundle.mjs` failed with ENOENT on a freshly scaffolded game. When a command
+writes a manifest, it writes every file that manifest names; `test/scaffold.test.mjs` now checks each path in `game.json`.
+
 **A check that cannot fail looks like a pass.** After a port is green, break it three ways (a constant, a branch, an
 offset) and watch `verify` fail each time; otherwise the cases may not reach the code you think they do.
 
@@ -48,3 +52,19 @@ replaced, grep for the old port name across docs, help text and packaging lists 
 never drew its settled cells or grid lines. `verify` stayed green because it replays the logic, not the published page.
 `scripts/exported-names.mjs` keeps every binding (commas count only at depth zero) and `npm test`
 checks it; after regenerating `docs/play/`, open the changed pages and look at them.
+
+**One driver ignored PLAYWRIGHT_PATH.** Four drivers each had a copy of the Playwright lookup, and Dino called
+`require("playwright")` itself, so with Playwright installed outside the repository `record dino` failed with Node's
+"Cannot find module" while the others worked. Every driver loads it with `loadPlaywright()` from `lib/playwright.mjs`,
+and `test/playwright.test.mjs` checks each `games/*/driver.mjs` for it.
+
+**A crashed port showed only the Node.js version line.** `verify` reported the last two lines of a crashed port's stderr,
+and Node ends an uncaught error with its stack, a blank line and `Node.js vNN`, so the error never showed up. Dropping the
+blank and version lines is not enough, because the last two lines are then stack frames. Taking the first stack is not
+right either, because a port may log an error before the one that ends it. `crashReason` starts from the last message
+line and adds the first frame of the stack under it. A message can go on in lines that are not indented
+(`new Error("boom\ndetail")`, an `assert.deepStrictEqual` diff), so from there it goes up to the line where the error
+begins, `Error: boom` or `AssertionError [ERR_ASSERTION]: ...`, but not past an earlier stack. Check a message taken from
+another program's output against what it really prints.
+
+**Third-party libraries can consume `Math.random()` before the game starts.** jQuery 1.8.3 calls `Math.random()` twice during initialization, which prepended two stray draws to `tape` and shifted every mine placement. Reset the RNG tape after page load finishes so `tape` records only calls from the game itself.

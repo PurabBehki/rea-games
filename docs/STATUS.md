@@ -93,6 +93,23 @@ The play page (`docs/play/paddles.html`) has its own art; it was played in headl
 with no console errors. Gaps: the computer's level 0 (behind by 8 points) never happened, and there is no Godot or
 Bevy port yet. The game is called "paddles" because Pong is a trademark; see `NOTICE`.
 
+## Mines (mine-finding grid)
+
+| Game | Port | Cases | Inputs | Result |
+|---|---|---|---|---|
+| Mines | web (JS) | 14 | 628 | all identical, exact comparison |
+
+Recorded from the unmodified original (MIT) with a fake clock and a taped `Math.random`; jQuery 1.8.3 is served from a
+local copy and its two start-up draws are cleared from the tape. The 14 cases cover all three difficulties: 25 first
+clicks drew 32 mine maps (7 rejected because the clicked cell was a mine), 4 games won and 15 lost, 133 left and 466
+right clicks (flags and chords). Breaking the easy difficulty constant, the chord flag check and a neighbour offset made
+8, 1 and 14 of 14 cases fail.
+
+The play page (`docs/play/mines.html`) draws its own tiles, numbers and flags; it was played in Chromium (easy board,
+a reveal with a flood fill, a flag) with no console errors. Gaps: the original's animations, its image drawing and the
+saved high scores are not recorded, and there is no Godot or Bevy port yet. The game is called "mines" because
+Minesweeper is a trademark; see `NOTICE`.
+
 ## Gaps (read before quoting any number)
 
 - **Coverage is what the cases hit.** Dino: only 7 crashes into the flying obstacle, none while speed-dropping; no
@@ -108,7 +125,8 @@ Bevy port yet. The game is called "paddles" because Pong is a trademark; see `NO
   official release and checked against the published SHA-512 before use. Breaking the GDScript port (spawn odds, win
   threshold) made 16 and 3 of 19 cases pass, so the check bites there too.
 - The repository has not been pushed anywhere. Cases are stored gzipped (`rea-games pack`).
-- The agent plugin manifest (`.claude-plugin`) was written from the documented format and has not been installed in
-  Claude Code. The Codex plugin format is not provided; `AGENTS.md` points Codex at the skill.
+- Agent plugin manifests: `.claude-plugin` (Claude), `.codex-plugin` (Codex), and `.agents/plugins/marketplace.json`
+  (agent-agnostic marketplace). `test/plugin.test.mjs` keeps both `plugin.json` versions equal to `package.json`.
+  They have not been installed end-to-end here.
 - `node games/dino/record.mjs --visual` reads unpacked `cases/*.json`; run `rea-games record dino` first (it also clears packed copies).
 - CI (`.github/workflows/verify.yml`) has never run.

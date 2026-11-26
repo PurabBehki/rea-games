@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { verifyGames, summaryLines } from "../lib/verify.mjs";
+import { verifyGames, summaryLines, crashReason } from "../lib/verify.mjs";
 
 // A port that answers every case with the recorded trace.
 const ECHO_PORT = `let s = "";
@@ -71,4 +71,61 @@ test("the log names the failure as it happens and ends with one line per port", 
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+test("a crashed Node port is reported with its error and where it was thrown", () => {
+  const crash = { cmd: ["node", "-e", "throw new Error('boom')"] };
+  const root = makeRoot({ a: { crash } });
+  try {
+    const [r] = verifyGames(root, ["a"], null, quiet);
+    assert.equal(r.failures.length, 1);
+    assert.match(r.failures[0].problem, /^port exited 1: Error: boom \| at \[eval\]:1:\d+$/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a crashed Node port whose message goes on in lines that are not indented keeps its Error line", () => {
+  const crash = { cmd: ["node", "-e", "throw new Error('boom\\ndetail')"] };
+  const root = makeRoot({ a: { crash } });
+  try {
+    const [r] = verifyGames(root, ["a"], null, quiet);
+    assert.equal(r.failures.length, 1);
+    assert.match(r.failures[0].problem, /^port exited 1: Error: boom \| at \[eval\]:1:\d+$/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("crashReason drops blank lines and the Node.js version line, and keeps a panic's last two lines", () => {
+  const node = "[eval]:1\nthrow new Error('boom')\n^\n\nError: boom\n    at [eval]:1:7\n    at runScriptInThisContext (node:internal/vm:209:10)\n\nNode.js v22.23.5\n";
+  assert.equal(crashReason(node), "Error: boom | at [eval]:1:7");
+  const panic = "thread 'main' panicked at src/main.rs:3:5:\nboom\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n";
+  assert.equal(crashReason(panic), "boom | note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace");
+  assert.equal(crashReason(""), "");
+});
+
+test("crashReason takes the last message, not an error logged before it", () => {
+  const recovered = "Error: recovered\n    at retry (runner.mjs:1:1)\nfatal: boom\n";
+  assert.equal(crashReason(recovered), "at retry (runner.mjs:1:1) | fatal: boom");
+  const logged = "Error: warning first\n    at warn (runner.mjs:1:1)\nrunner.mjs:2\nthrow new Error('boom')\n^\n\nError: boom\n    at runner.mjs:2:7\n\nNode.js v22.23.5\n";
+  assert.equal(crashReason(logged), "Error: boom | at runner.mjs:2:7");
+  const props = "Error: ENOENT: no such file or directory, open 'x'\n    at Object.openSync (node:fs:553:18)\n    at main (runner.mjs:1:4) {\n  errno: -2,\n  code: 'ENOENT'\n}\n\nNode.js v22.23.5\n";
+  assert.equal(crashReason(props), "Error: ENOENT: no such file or directory, open 'x' | at Object.openSync (node:fs:553:18)");
+});
+
+test("crashReason keeps an error whose message goes on in indented lines before its stack", () => {
+  const detail = "Error: boom\n  detail\n    at main (runner.mjs:1:1)\n    at start (runner.mjs:2:1)\n";
+  assert.equal(crashReason(detail), "Error: boom | at main (runner.mjs:1:1)");
+  const diff = "AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:\n+ actual - expected\n\n  {\n+   a: 1\n-   a: 2\n  }\n\n    at main (runner.mjs:1:1)\n    at start (runner.mjs:2:1) {\n  code: 'ERR_ASSERTION',\n  operator: 'deepStrictEqual'\n}\n\nNode.js v22.23.5\n";
+  assert.equal(crashReason(diff), "AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal: | at main (runner.mjs:1:1)");
+});
+
+test("crashReason starts at the line where the error begins when its message goes on in lines that are not indented", () => {
+  const multi = "[eval]:1\nthrow new Error(\"boom\\ndetail\")\n^\n\nError: boom\ndetail\n    at [eval]:1:7\n    at runScriptInThisContext (node:internal/vm:209:10)\n\nNode.js v22.23.1\n";
+  assert.equal(crashReason(multi), "Error: boom | at [eval]:1:7");
+  const typed = "TypeError: bad input\nexpected a number\ngot a string\n    at main (runner.mjs:1:1)\n";
+  assert.equal(crashReason(typed), "TypeError: bad input | at main (runner.mjs:1:1)");
+  const logged = "Error: warning first\n    at warn (runner.mjs:1:1)\nOops: boom\ndetail\n    at main (runner.mjs:2:1)\n";
+  assert.equal(crashReason(logged), "detail | at main (runner.mjs:2:1)");
 });

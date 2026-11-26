@@ -1,0 +1,19 @@
+{
+  "name": "mines",
+  "title": "Mines",
+  "original": {
+    "repo": "Joeynoh/HTML5-Minesweeper",
+    "license": "MIT",
+    "path": "originals/mines"
+  },
+  "record": "record.mjs",
+  "ports": {
+    "web": {
+      "cmd": [
+        "node",
+        "ports/web/run.mjs"
+      ],
+      "play": "ports/web/index.html"
+    }
+  }
+}
