@@ -28,12 +28,13 @@
   #levels button { background:var(--panel); color:var(--text); border:0; border-radius:8px; padding:6px 14px; font:inherit; font-weight:700; cursor:pointer; }
   p.keys { margin:12px 2px 0; color:var(--muted); font-size:14px; }
   kbd { background:var(--panel); border-radius:5px; padding:1px 7px; font:inherit; font-weight:600; color:var(--text); }
+  .sr-only { position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 </style>
 </head>
 <body>
 <main>
   <header><h1>Bricks</h1><span>own art and levels &middot; rules rebuilt from the recording</span></header>
-  <div id="bar" aria-live="polite">
+  <div id="bar">
     <div class="box"><small>score</small><b id="score">0</b></div>
     <div class="box"><small>best</small><b id="best">0</b></div>
     <div class="box"><small>balls</small><b id="lives">3</b></div>
@@ -41,12 +42,13 @@
   </div>
   <div id="court">
     <canvas id="c" width="448" height="378" role="img" aria-label="Bricks game"></canvas>
-    <div id="msg" aria-live="polite">
+    <div id="msg">
       <h2 id="msgtitle">Bricks</h2>
       <p id="msgsub">Press Space or tap to play</p>
       <div id="levels"><button type="button" id="prev" aria-label="previous level">&darr;</button><button type="button" id="next" aria-label="next level">&uarr;</button></div>
     </div>
   </div>
+  <p id="live" class="sr-only" aria-live="polite" aria-atomic="true"></p>
   <p class="keys"><kbd>&larr;</kbd> <kbd>&rarr;</kbd> (or <kbd>A</kbd> <kbd>D</kbd>) move &middot; <kbd>Space</kbd> play, or launch before the count ends &middot; <kbd>&uarr;</kbd> <kbd>&darr;</kbd> pick a level &middot; <kbd>Esc</kbd> give up. Where the ball meets the paddle sets its angle; it speeds up with every brick. Clear a level for an extra ball.</p>
 </main>
 <script>
@@ -85,6 +87,7 @@ import { Bricks, KEY, COLS } from "./bricks.mjs";
   const CW = cv.width, CH = cv.height, DPR = Math.min(2, window.devicePixelRatio || 1); // drawn sharp on dense screens
   cv.width = CW * DPR; cv.height = CH * DPR;
   const $ = (id) => document.getElementById(id);
+  const set = (id, v) => { const el = $(id), s = String(v); if (el.textContent !== s) el.textContent = s; };
   let best = 1000, ended = null; // how the last game ended: "lost" or "left"
   try { best = +localStorage.getItem("bricks-best") || 1000; } catch {}
   const game = new Bricks({ rng: Math.random, levels: LEVELS, clock0: Math.floor(performance.now()), highscore: best });
@@ -126,7 +129,6 @@ import { Bricks, KEY, COLS } from "./bricks.mjs";
       ctx.fillText({ "ready...": "3", "set..": "2", "go!": "go" }[b.label] ?? "", game.court.left + game.court.width / 2, p.y - 60);
     }
     ctx.restore();
-   const set = (id, v) => { const el = $(id), s = String(v); if (el.textContent !== s) el.textContent = s; };
     set("score", game.vscore);
     set("best", Math.max(best, game.score));
     set("lives", game.lives);
@@ -137,6 +139,7 @@ import { Bricks, KEY, COLS } from "./bricks.mjs";
       set("msgtitle", ended === "lost" ? "Game over" : ended === "left" ? "Game ended" : "Bricks");
       set("msgsub", (ended ? game.score + " points. " : "") + "Level " + (game.level + 1) + " of " + LEVELS.length + ". Press Space or tap to play");
     }
+    set("live", menu ? $("msgtitle").textContent + ". " + $("msgsub").textContent : "Score " + game.score + ", " + game.lives + " balls, level " + (game.level + 1));
   }
 
   // ---- input: keys go straight to the rules, at the moment they happen

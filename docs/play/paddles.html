@@ -25,7 +25,7 @@
   #modes button.alt { background:var(--panel); color:var(--text); }
   p.keys { margin:12px 2px 0; color:var(--muted); font-size:14px; }
   kbd { background:var(--panel); border-radius:5px; padding:1px 7px; font:inherit; font-weight:600; color:var(--text); }
-  #live { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+  .sr-only { position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 </style>
 </head>
 <body>
@@ -33,7 +33,7 @@
   <header><h1>Paddles</h1><span>own art &middot; rules rebuilt from the recording</span></header>
   <div id="court">
     <canvas id="c" width="640" height="480" role="img" aria-label="Paddles game"></canvas>
-    <div id="live" aria-live="polite"></div>
+    <p id="live" class="sr-only" aria-live="polite" aria-atomic="true"></p>
     <div id="msg">
       <h2 id="msgtitle">Paddles</h2>
       <p id="msgsub">First to 9 points wins.</p>
@@ -334,8 +334,9 @@ const { Paddles, KEY, W, H, WALL, PADDLE_W, PADDLE_H, RADIUS, WIN } = __mod0;
   const DPR = Math.min(2, window.devicePixelRatio || 1); // drawn sharp on dense screens
   cv.width = W * DPR; cv.height = H * DPR;
   const $ = (id) => document.getElementById(id);
+  const set = (id, v) => { const el = $(id), s = String(v); if (el.textContent !== s) el.textContent = s; };
   const game = new Paddles({ rng: Math.random, clock0: Math.floor(performance.now()) });
-  let lastlive="";
+
   // ---- drawing: flat shapes, a dotted centre line, big soft score digits
   function draw() {
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
@@ -357,18 +358,11 @@ const { Paddles, KEY, W, H, WALL, PADDLE_W, PADDLE_H, RADIUS, WIN } = __mod0;
     }
     $("msg").classList.toggle("off", game.playing);
     // the winner stays on record after a new game starts, so name it only while the scores show a finished game
-    if (!game.playing) {
-      $("msgtitle").textContent = game.winner !== null && Math.max(...game.scores) >= WIN
-        ? (game.winner === 0 ? "Left" : "Right") + " wins " + Math.max(...game.scores) + " to " + Math.min(...game.scores)
-        : "Paddles";
-    }
-    const live= !game.playing && game.winner!==null && Math.max(...game.scores)>=WIN 
-    ? (game.winner === 0 ? "Left" : "Right") + " wins " + Math.max(...game.scores) + " to " + Math.min(...game.scores)
-    : "Left " + game.scores[0] + ", Right " + game.scores[1];
-    if(live !==lastlive) {
-      $("live").textContent=live;
-      lastlive=live;
-    }
+    const won = !game.playing && game.winner !== null && Math.max(...game.scores) >= WIN
+      ? (game.winner === 0 ? "Left" : "Right") + " wins " + Math.max(...game.scores) + " to " + Math.min(...game.scores)
+      : null;
+    if (!game.playing) set("msgtitle", won ?? "Paddles");
+    set("live", won ?? "Left " + game.scores[0] + ", Right " + game.scores[1]);
   }
 
   // ---- input: keys go straight to the rules, at the moment they happen
